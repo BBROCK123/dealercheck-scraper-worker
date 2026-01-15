@@ -2,48 +2,51 @@ const express = require('express');
 const { chromium } = require('playwright-extra');
 const stealth = require('puppeteer-extra-plugin-stealth')();
 
+// שימוש בתוסף ה-Stealth למניעת חסימות
 chromium.use(stealth);
+
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 app.get('/scrape', async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: 'URL is required' });
 
-  console.log(`Deep Scanning: ${url}`);
-  const browser = await chromium.launch({ headless: true });
+  console.log(`Attempting to scrape: ${url}`);
   
+  let browser;
   try {
+    browser = await chromium.launch({ 
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'] // חשוב לסביבת ענן
+    });
+    
     const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      viewport: { width: 1280, height: 720 }
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     });
     
     const page = await context.newPage();
-    
-    // דימוי התנהגות אנושית - תנועת עכבר וזמן המתנה
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await page.mouse.move(100, 100);
-    await new Promise(r => setTimeout(r, 3000)); // המתנה של 3 שניות לטעינת ה-JS
+    
+    // המתנה קלה לטעינת הנתונים
+    await new Promise(r => setTimeout(r, 2000));
 
-    const data = await page.evaluate(() => {
-      // ניסיון לשלוף נתונים מכמה מקורות במקביל
-      const nextData = document.getElementById('__NEXT_DATA__');
-      const jsonLd = Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
-                        .map(s => JSON.parse(s.innerText));
-      
-      return {
-        nextData: nextData ? JSON.parse(nextData.innerText) : null,
-        jsonLd: jsonLd,
-        title: document.title
-      };
-    });
+    const data = await page.evaluate(() => ({
+      nextData: window.__NEXT_DATA__ || null,
+      initialState: window.__PRELOADED_STATE__ || window.__INITIAL_STATE__ || null,
+      title: document.title
+    }));
     
     await browser.close();
     res.json({ success: true, data });
   } catch (error) {
+    console.error("Scrape Error:", error.message);
     if (browser) await browser.close();
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.listen(process.env.PORT || 3000);
+// נקודת בדיקה לראות שהשרת חי
+app.get('/', (req, res) => res.send('Scraper is Online!'));
+
+app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
