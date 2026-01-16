@@ -4,7 +4,7 @@ const stealth = require('puppeteer-extra-plugin-stealth')();
 
 chromium.use(stealth);
 const app = express();
-// חובה להשתמש בפורט שהמערכת מקצה - בלוגים ראינו שזה 10000
+// חובה להשתמש בפורט של Render (בלוגים ראינו שזה 10000)
 const PORT = process.env.PORT || 10000;
 
 app.get('/scrape', async (req, res) => {
@@ -25,9 +25,10 @@ app.get('/scrape', async (req, res) => {
     });
     
     const page = await context.newPage();
+    // ניווט והמתנה לטעינה ראשונית
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     
-    // השהיה של 5 שניות לטעינת נתונים
+    // השהיה של 5 שניות כדי לעקוף הגנות ולטעון JSON-LD
     await new Promise(r => setTimeout(r, 5000));
 
     const data = await page.evaluate(() => {
@@ -52,6 +53,6 @@ app.get('/scrape', async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => res.send('Server is Up!'));
+app.get('/', (req, res) => res.send('Scraper is Online!'));
 
-app.listen(PORT, () => console.log(`Scraper is running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
