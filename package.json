@@ -1,7 +1,6 @@
 {
-  "name": "dealercheck-scraper-worker",
+  "name": "dealercheck-scraper",
   "version": "1.0.0",
-  "description": "Private Playwright Scraper",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
