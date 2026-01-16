@@ -2,9 +2,11 @@ const express = require('express');
 const { chromium } = require('playwright-extra');
 const stealth = require('puppeteer-extra-plugin-stealth')();
 
+// הפעלת תוסף Stealth למניעת חסימות בוטים
 chromium.use(stealth);
+
 const app = express();
-// חובה להשתמש בפורט של Render (בלוגים ראינו שזה 10000)
+// שימוש בפורט 10000 כפי שנדרש על ידי רנדר
 const PORT = process.env.PORT || 10000;
 
 app.get('/scrape', async (req, res) => {
@@ -15,6 +17,7 @@ app.get('/scrape', async (req, res) => {
   let browser;
   
   try {
+    // השקת דפדפן עם הגדרות מותאמות לשרת ענן
     browser = await chromium.launch({ 
       headless: true, 
       args: ['--no-sandbox', '--disable-setuid-sandbox'] 
@@ -25,13 +28,15 @@ app.get('/scrape', async (req, res) => {
     });
     
     const page = await context.newPage();
-    // ניווט והמתנה לטעינה ראשונית
+    
+    // ניווט והמתנה לטעינה בסיסית של האתר
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     
-    // השהיה של 5 שניות כדי לעקוף הגנות ולטעון JSON-LD
+    // השהיה של 5 שניות כדי לעקוף הגנות אבטחה ולטעון נתונים
     await new Promise(r => setTimeout(r, 5000));
 
     const data = await page.evaluate(() => {
+      // שליפת נתוני JSON-LD (השיטה הכי אמינה לשנה, מחיר ודגם)
       const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
       const jsonLd = scripts.map(s => {
         try { return JSON.parse(s.innerText); } catch (e) { return null; }
@@ -53,6 +58,7 @@ app.get('/scrape', async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => res.send('Scraper is Online!'));
+// דף בדיקה כדי לראות שהשרת עובד
+app.get('/', (req, res) => res.send('Scraper is Live!'));
 
 app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
